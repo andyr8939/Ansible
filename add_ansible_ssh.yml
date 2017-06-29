@@ -1,0 +1,13 @@
+---
+# Push Create a local user for Ansible and push out the RSA key
+- hosts: all
+
+  become: yes
+
+  tasks:
+
+  - name: Creating local user
+    user: name=ansible comment="Ansible User" group=wheel
+
+  - name: Placing key
+    authorized_key: user=ansible key="{{ lookup('file', '/home/ansible/.ssh/id_rsa.pub') }}"

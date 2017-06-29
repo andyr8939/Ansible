@@ -1,0 +1,20 @@
+---
+# This file checks for text inside of a file, in this case it was for an issue I had with
+# Centrify Samba that was part of a base VM image.  As such when the VM was deployed, if the 
+# samba adbindproxy.pl file wasn't run again, the samba config would keep the vm template
+# name in the smb.conf file, so this lets me find that.
+- hosts: all
+
+  tasks:
+
+  - name: Check whether /etc/samba/smb.conf contains "template name"
+    command: grep -i "oracle" /etc/samba/smb.conf
+    register: checkmyconf
+    always_run: True
+    ignore_errors: True
+    changed_when: False
+
+  - name: Greet the world if /etc/samba/smb.conf contains "template name"
+    debug: msg="Found it!"
+    when: checkmyconf.rc == 0
+     

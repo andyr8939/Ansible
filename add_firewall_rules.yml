@@ -1,0 +1,26 @@
+---
+
+# This modifies the local firewalls of linux servers to include whatever ports you need.
+# It also distringuished between OEl6 and OEL7 firewall differences (iptables vs firewalld) 
+# by checking the OS version first.
+# Just copy the tasks as many time as needed to add rules.  Each rule gets commented with
+# ansible so when you re-run it doesn't re-add.
+
+- hosts: all
+  become: yes
+  tasks: 
+  - name: Oracle 7 Port Rule Added Here
+    firewalld: port=22/tcp permanent=true state=enabled
+    when: ansible_distribution == 'OracleLinux' and ansible_distribution_version|int >= 7
+    notify: 
+    - restart firewall
+   - name: Oracle 6 Port Rule Added Here
+    iptables_raw:
+      backup=yes
+      name=allow_ssh
+      rules='-A INPUT -p tcp --dport 22 -j ACCEPT'
+      weight=1
+    when: ansible_distribution == 'OracleLinux' and ansible_distribution_version|int < 7
+  handlers:
+    - name: restart firewall
+      service: name=firewalld state=reloaded
