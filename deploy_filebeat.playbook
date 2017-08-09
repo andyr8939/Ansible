@@ -1,0 +1,29 @@
+---
+- hosts: all
+  remote_user: root
+  tasks:
+  - name: Copy Filebeat RPM to client
+    copy: 
+      src: /ansible-distrib/filebeat/filebeat-5.5.1-x86_64.rpm 
+      dest: /tmp/
+  - name: Install Filebeat
+    yum: 
+      name: /tmp/filebeat-5.5.1-x86_64.rpm 
+      state: present
+  - name: Copy Filebeat Config to Client
+    copy:
+      src: /ansible-distrib/filebeat/filebeat.yml
+      dest: /etc/filebeat/
+      mode: "u=rw,g=,o="
+    notify:
+    - restart filebeat
+  - name: Ensure Filebeat Service enabled and started
+    service: 
+      name: filebeat
+      state: started
+      enabled: yes
+  handlers:
+    - name: restart filebeat
+      service: 
+        name: filebeat
+        state: restarted
