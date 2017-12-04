@@ -1,0 +1,61 @@
+---
+- hosts: all
+  become: true
+  tasks:
+
+  - name: Ensure OEL Latest Repo is Enabled (OEL 7)
+    when: ansible_distribution == 'OracleLinux' and ansible_distribution_version|int >= 7
+    yum_repository:
+      name: ol7_latest
+      file: public-yum-ol7
+      description: Oracle Linux $releasever Latest ($basearch)
+      baseurl: http://yum.oracle.com/repo/OracleLinux/OL7/latest/$basearch/
+      gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-oracle
+      gpgcheck: yes
+      enabled: yes
+
+  - name: Ensure OEL Optional Repo is Enabled (OEL 7)
+    when: ansible_distribution == 'OracleLinux' and ansible_distribution_version|int >= 7
+    yum_repository:
+      name: ol7_optional_latest
+      file: public-yum-ol7
+      description: Oracle Linux $releasever Optional Latest ($basearch)
+      baseurl: http://yum.oracle.com/repo/OracleLinux/OL7/optional/latest/$basearch/
+      gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-oracle
+      gpgcheck: yes
+      enabled: yes
+
+  - name: Ensure OEL Latest Repo is Enabled (OEL 6)
+    when: ansible_distribution == 'OracleLinux' and ansible_distribution_version|int < 7
+    yum_repository:
+      name: public_ol6_latest
+      file: public-yum-ol6
+      description: Oracle Linux $releasever Latest ($basearch)
+      baseurl: http://yum.oracle.com/repo/OracleLinux/OL6/latest/$basearch/
+      gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-oracle
+      gpgcheck: yes
+      enabled: yes
+
+  - name: Yum Update excluding none core repos
+    yum:
+      name: '*'
+      state: latest
+      disablerepo: enter_repo_name_here
+
+  - name: Check for reboot hint.
+    shell: LAST_KERNEL=$(rpm -q --last kernel-uek | awk 'NR==1{sub(/kernel-uek-/,""); print $1}' | head -1); CURRENT_KERNEL=$(uname -r); test $LAST_KERNEL != $CURRENT_KERNEL && echo 'reboot' || echo 'no'
+    ignore_errors: true
+    register: reboot_hint
+
+  - name: Rebooting System
+    shell: sleep 3 && shutdown -r now "Reboot required for updated kernel"
+    async: 5
+    poll: 0
+    ignore_errors: true
+    when: reboot_hint.stdout.find("reboot") != -1
+    register: rebooting
+
+  - name: Wait for system to reboot
+    wait_for_connection:
+      timeout: 60
+      when: rebooting|changed
